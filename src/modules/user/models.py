@@ -1,3 +1,4 @@
+from decimal import Decimal
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -6,6 +7,7 @@ from sqlalchemy.orm import (
 )
 
 from sqlalchemy import (
+    DECIMAL,
     String,
     Boolean,
     ForeignKey,
@@ -112,7 +114,7 @@ class Service(Base):
     service_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     duration: Mapped[Time] = mapped_column(Time, nullable=False)
-    price: Mapped[float] = mapped_column(Float(5, 2), nullable=False)
+    price: Mapped[Float] = mapped_column(Float(5, 2), nullable=False)
     
     '''
     Service class relationships

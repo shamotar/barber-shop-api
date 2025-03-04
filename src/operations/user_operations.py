@@ -52,7 +52,7 @@ class UserOperations:
         # If another error is returned that was somehow not caught above, return generic error message.
         except SQLAlchemyError:
             raise HTTPException(
-                status_code=400,
+                status_code=500,
                 detail=f"An unexpected error occured"
             )
 
@@ -64,7 +64,7 @@ class UserOperations:
         # Not anticipating many errors here, but just in case
         except SQLAlchemyError:
             raise HTTPException(
-                status_code=400,
+                status_code=500,
                 detail=f"An unexpected error occured"
             )
 
@@ -77,7 +77,7 @@ class UserOperations:
         # Handle generic exceptions, wrong ID provided error already handled in router
         except SQLAlchemyError:
             raise HTTPException(
-                status_code=400,
+                status_code=500,
                 detail="An unexpected error occured"
             )
 
@@ -111,7 +111,7 @@ class UserOperations:
     
         except SQLAlchemyError:
             raise HTTPException(
-                status_code=400, 
+                status_code=500, 
                 detail="An unexpected error occurred"
                 )
 
@@ -129,6 +129,6 @@ class UserOperations:
         # Handle generic exceptions, wrong ID provided error already handled in router
         except SQLAlchemyError:
             raise HTTPException(
-                status_code=400,
+                status_code=500,
                 detail="An unexpected error occured"
             )
