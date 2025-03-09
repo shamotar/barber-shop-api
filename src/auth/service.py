@@ -3,7 +3,7 @@ from keycloak.exceptions import KeycloakAuthenticationError
 from core.config import settings
 from auth.models import UserInfo
 from keycloak import KeycloakOpenID, KeycloakOpenIDConnection, KeycloakAdmin
-from modules.user.user_schema import UserCreate
+from modules.user.user_schema import UserCreate, UserUpdate
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 
@@ -97,7 +97,6 @@ class AuthService():
         }
 
 
-
         try:
             AuthService.keycloak_admin.create_user(user_representation)
             return {"message": "User created successfully"}
@@ -106,6 +105,39 @@ class AuthService():
                 status_code=400, detail=f"Error creating user: {str(e)}"
             )
         
+
+    @staticmethod
+    def update_kc_user(user: UserUpdate):
+        
+        user_representation = {
+            "username": user.email,
+            "email": user.email,
+            "firstName": user.firstName,
+            "lastName": user.lastName,
+            }
+        
+        try:
+            user_id = AuthService.keycloak_admin.get_user_id(username=user.email)
+            AuthService.keycloak_admin.update_user(user_id=user_id,payload=user_representation)
+            return {"message": "User updated successfully"}
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Error updating user: {str(e)}"
+            )
+        
+
+    @staticmethod
+    def delete_kc_user(user_email):
+        try:
+            user_id = AuthService.keycloak_admin.get_user_id(username=user_email)
+            AuthService.keycloak_admin.delete_user(user_id=user_id)
+            return {"message": "User deleted successfully"}
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Error deleting user: {str(e)}"
+            )
+        
+    
     @staticmethod
     def has_role(required_role: str):
         bearer_scheme = HTTPBearer()
