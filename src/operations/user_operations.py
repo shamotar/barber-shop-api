@@ -6,7 +6,7 @@ from pydantic import EmailStr
 from modules.user.user_schema import UserCreate, UserBase
 from typing import List, Optional
 from fastapi import HTTPException
-
+from auth.service import AuthService
 '''
 CRUD operations for interacting with users database table
 '''
@@ -44,10 +44,17 @@ class UserOperations:
             )
 
         try:
+            # Creates a new user in the database
             new_user = User(**user_data.model_dump())
             self.db.add(new_user)
             await self.db.commit()
             await self.db.refresh(new_user)
+
+            # Creates a Keycloak user 
+            created_kc_user = AuthService.register_kc_user(new_user)
+            if not created_kc_user:
+                raise HTTPException(status_code=400, detail=f"Keycloak user creation has failed")
+            
             return new_user
         # If another error is returned that was somehow not caught above, return generic error message.
         except SQLAlchemyError:
@@ -105,6 +112,10 @@ class UserOperations:
             for key, value in user_data.dict(exclude_unset=True).items():
                 setattr(user, key, value)
 
+            # Update Keycloak user data
+            AuthService.update_kc_user(user_data)
+
+            # Update database user data
             await self.db.commit()
             await self.db.refresh(user)
             return user
@@ -119,13 +130,20 @@ class UserOperations:
     # Delete a user by their ID
     async def delete_user(self, user_id: int) -> bool:
         try:
+            # Get user from database
             result = await self.db.execute(select(User).filter(User.user_id == user_id))
             user = result.scalars().first()
             if not user:
                 return False
+            
+            # Delete user from Keycloak server
+            AuthService.delete_kc_user(user.email)
+
+            # Delete user from database
             await self.db.delete(user)
             await self.db.commit()
             return True
+        
         # Handle generic exceptions, wrong ID provided error already handled in router
         except SQLAlchemyError:
             raise HTTPException(

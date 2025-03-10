@@ -30,11 +30,6 @@ async def create_user(user: UserCreate, db_session: DBSessionDep):
     if not created_user:
         raise HTTPException(status_code=400, detail="User creation failed")
     
-    # Creates a Keycloak user 
-    created_kc_user = AuthService.register_kc_user(user)
-    if not created_kc_user:
-        raise HTTPException(status_code=400, detail=f"Keycloak user creation has failed")
-    
     return created_user
 
 # GET endpoint to get all users from the database
