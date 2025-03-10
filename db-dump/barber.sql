@@ -23,7 +23,7 @@ CREATE TABLE appointment (
     appointment_id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     barber_id INT NOT NULL,
-    status ENUM('pending', 'confirmed', 'completed', 'canceled') NOT NULL,
+    status ENUM('pending', 'confirmed', 'completed', 'cancelled') NOT NULL,
     FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE,
     FOREIGN KEY (barber_id) REFERENCES barber(barber_id) ON DELETE CASCADE
 );
