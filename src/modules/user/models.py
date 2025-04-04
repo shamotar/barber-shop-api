@@ -41,6 +41,7 @@ class User(Base):
     __tablename__ = "user"
     
     user_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kc_id: Mapped[str] = mapped_column(String(50), primary_key=False)
     firstName: Mapped[str] = mapped_column(String(50), nullable=False)
     lastName: Mapped[str] = mapped_column(String(50), nullable=False)
     email: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
@@ -118,7 +119,7 @@ class Service(Base):
     duration: Mapped[int] = mapped_column(Integer, nullable=False)
     price: Mapped[Float] = mapped_column(Float(5, 2), nullable=False)
     category: Mapped[str] = mapped_column(String(50), nullable=False)
-    description: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String(255), nullable=False)
     popularity_score: Mapped[int] = mapped_column(Integer, nullable=False)
     
     '''

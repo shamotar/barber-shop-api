@@ -98,11 +98,14 @@ class AuthService():
 
         try:
             AuthService.keycloak_admin.create_user(user_representation)
-            return {"message": "User created successfully"}
+            user =  AuthService.keycloak_admin.get_users({"username": user.email})
+            kc_id = user[0]["id"]
+            return kc_id
         except Exception as e:
             raise HTTPException(
                 status_code=400, detail=f"Error creating user: {str(e)}"
             )
+        
         
 
 
