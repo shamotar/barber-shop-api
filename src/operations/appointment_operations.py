@@ -280,19 +280,6 @@ class AppointmentOperations:
             if not appointment:
                 return False
 
-            # Delete associated appointment_time_slot records
-            await self.db.execute(
-                delete(Appointment_TimeSlot).where(
-                    Appointment_TimeSlot.appointment_id == appointment_id
-                )
-            )
-            # Delete associated appointment_service records
-            await self.db.execute(
-                delete(AppointmentService).where(
-                    AppointmentService.appointment_id == appointment_id
-                )
-            )
-
             await self.db.delete(appointment)
             await self.db.commit()
             return True

@@ -1,4 +1,3 @@
-from decimal import Decimal
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -7,7 +6,6 @@ from sqlalchemy.orm import (
 )
 
 from sqlalchemy import (
-    DECIMAL,
     String,
     Boolean,
     ForeignKey,
@@ -134,10 +132,10 @@ class Appointment(Base):
     barber: Mapped["Barber"] = relationship(back_populates="appointments", lazy="selectin")
 
     # An Appointment can have multiple AppointmentService records ()
-    appointment_services: Mapped[list["AppointmentService"]] = relationship(back_populates="appointment", lazy="selectin")
+    appointment_services: Mapped[list["AppointmentService"]] = relationship(back_populates="appointment", lazy="selectin", cascade="all, delete, delete-orphan")
 
      # Relationship to Appointment_TimeSlot (creates Many-to-Many with TimeSlot)
-    appointment_time_slots: Mapped[list["Appointment_TimeSlot"]] = relationship("Appointment_TimeSlot", back_populates="appointment", lazy="selectin")
+    appointment_time_slots: Mapped[list["Appointment_TimeSlot"]] = relationship("Appointment_TimeSlot", back_populates="appointment", lazy="selectin", cascade="all, delete, delete-orphan")
 
     def to_response_schema(self) -> AppointmentResponse:
         return AppointmentResponse(
