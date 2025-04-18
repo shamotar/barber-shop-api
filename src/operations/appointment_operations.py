@@ -124,6 +124,61 @@ class AppointmentOperations:
 
             if not appt:
                 return None
+            
+             # Send out booking confirmation emails
+            try:
+                # Retrieve all necessary information from DB for crafting custom emails based on specific appointment
+                booking_user_result = await self.db.execute(select(User).filter(User.user_id == appt.user_id))
+                booking_user = booking_user_result.scalars().first()
+
+                barber_result = await self.db.execute(select(Barber).filter(Barber.barber_id == appt.barber_id))
+                barber = barber_result.scalars().first()
+
+                barber_information_result = await self.db.execute(select(User).filter(User.user_id == barber.user_id))
+                barber_information = barber_information_result.scalars().first()
+
+                service_information_result = await self.db.execute(select(Service).filter(Service.service_id == appointment_data.service_id))
+                service_information = service_information_result.scalars().first()
+                
+                slots = []
+                for slot_id in appointment_data.time_slot:
+                    time_slot_result = await self.db.execute(select(TimeSlot).filter(TimeSlot.slot_id == slot_id))
+                    time_slot = time_slot_result.scalars().first()
+                    if time_slot:
+                        slots.append(time_slot)
+
+                first_slot = min(slots, key=lambda slot: slot.start_time) if slots else None
+
+                if first_slot:
+                    appointment_time = first_slot.start_time.strftime('%I:%M %p')
+                    appointment_date = first_slot.schedule.date.strftime('%B %d, %Y')
+
+                # Send email to the client
+                await email_operations.send_email(
+                    f"{booking_user.email}",
+                    "Barber shop appointment scheduled successfully!",
+                    f"""
+                    {booking_user.firstName},
+                    your appointment for a {service_information.name} with {barber_information.firstName} {barber_information.lastName} 
+                    was successfully scheduled for {appointment_time} on {appointment_date}.
+                    """
+                )
+
+                # Send email to the barber
+                await email_operations.send_email(
+                    f"{barber_information.email}",
+                    "A client has scheduled an appointment",
+                    f"""
+                    {barber_information.firstName},
+                    {booking_user.firstName} {booking_user.lastName} has scheduled a {service_information.name} with
+                    you at {appointment_time} on {appointment_date}.        
+                    """
+                )
+            
+            # Log if there is an issue sending confirmation emails, but appointment will still be created
+            except Exception as e:
+                logger.error(f"An error occurred while sending confirmation emails: {e}")
+
 
             return appt.to_response_schema()
 
