@@ -2,12 +2,12 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI, Depends, Form
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from core.db import async_session_manager
 from core.config import settings
+from core.dependencies import oauth_2_scheme
 from routers.user_router import user_router
-from auth.controller import AuthController
 from routers.barber_router import barber_router
 from routers.service_router import service_router
 from routers.schedule_router import schedule_router
@@ -62,6 +62,13 @@ async def root():
 @app.get("/healthz")
 async def root():
     return {"healthy": True}
+
+@app.get("protected", dependencies=[Depends(oauth_2_scheme)])
+async def protected_route():
+    """
+    Protected route that requires authentication.
+    """
+    return {"message": "This is a protected route."}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
