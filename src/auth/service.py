@@ -129,6 +129,23 @@ class AuthService:
             raise HTTPException(
                 status_code=500, detail=f"Error updating user: {str(e)}"
             )
+        
+    def update_kc_user_password(kc_id: str, new_password: str):
+        """
+        Update the password of a user in Keycloak.
+        Args:
+            kc_id (str): The Keycloak ID of the user.
+            new_password (str): The new password to set for the user.
+        """
+        try:
+            AuthService.keycloak_admin.set_user_password(
+                user_id=kc_id, password=new_password, temporary=False
+            )
+            return {"message": "Password updated successfully"}
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Error updating password: {str(e)}"
+            )
 
     def delete_kc_user(user_email):
         try:

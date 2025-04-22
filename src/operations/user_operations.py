@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import SQLAlchemyError
 from modules.user.models import User
-from modules.user.user_schema import UserCreate
+from modules.user.user_schema import UserCreate, UserUpdate, UserPasswordUpdate
 from typing import List, Optional
 from fastapi import HTTPException
 
@@ -123,15 +123,17 @@ class UserOperations:
             )
 
     # Update user by their ID
-    async def update_user(self, user_id: int, user_data) -> Optional[User]:
+    async def update_user(self, user_id: int, user_data: UserUpdate) -> Optional[User]:
         try:
             if user_data.email:
-                existing_user_email = await self.db.execute(select(User).filter(User.email == user_data.email))
+                existing_user_email = await self.db.execute(select(User).filter(User.email == user_data.email, User.user_id != user_id))
+                # Check if the email already exists for another user
                 if existing_user_email.scalars().first():
                     raise HTTPException(status_code=400, detail="A user already exists with the provided email")
 
             if user_data.phoneNumber:
-                existing_user_phone = await self.db.execute(select(User).filter(User.phoneNumber == user_data.phoneNumber))
+                existing_user_phone = await self.db.execute(select(User).filter(User.phoneNumber == user_data.phoneNumber, User.user_id != user_id))
+                # Check if the phone number already exists for another user
                 if existing_user_phone.scalars().first():
                     raise HTTPException(status_code=400, detail="A user already exists with the provided phone number")
 
@@ -144,16 +146,12 @@ class UserOperations:
             if not user:
                 return None
 
-            for key, value in user_data.dict(exclude_unset=True).items():
+            for key, value in user_data.model_dump(exclude_unset=True).items():
                 setattr(user, key, value)
-
-            # Update database user data
-            await self.db.commit()
-            await self.db.refresh(user)
 
             # Update Keycloak user data# Update user in Keycloak
             try:
-                AuthService.update_kc_user(user_data)
+                AuthService.update_kc_user(user)
             except Exception as e:
                 logger.error(e)
                 # Rollback database changes if Keycloak update fails
@@ -162,6 +160,10 @@ class UserOperations:
                     status_code=400,
                     detail=f"Error updating Keycloak user: {str(e)}"
                 )
+            
+            # Update database user data
+            await self.db.commit()
+            await self.db.refresh(user)
 
             return user
     
@@ -188,6 +190,49 @@ class UserOperations:
             # Delete user from database
             await self.db.delete(user)
             await self.db.commit()
+            return True
+        
+        # Handle generic exceptions, wrong ID provided error already handled in router
+        except SQLAlchemyError as e:
+            logger.error(e)
+            await self.db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail="An unexpected error occured"
+            )
+        
+    # Update user password
+    async def update_user_password(self, user_id: int, password_data: UserPasswordUpdate) -> bool:
+        try:
+            # Get user from database
+            result = await self.db.execute(select(User).filter(User.user_id == user_id))
+            user = result.scalars().first()
+            if not user:
+                return False
+            
+            # Check if the old password is correct
+            try:
+                AuthService.authenticate_user(user.email, password_data.old_password)
+            except Exception as e:
+                logger.error(e)
+                raise HTTPException(status_code=400, detail="Old password is incorrect")
+
+            # Check if new password and confirm password match
+            if password_data.new_password != password_data.confirm_password:
+                raise HTTPException(status_code=400, detail="New password and confirm password do not match")
+
+            # Update the user's password in Keycloak
+            try:
+                AuthService.update_kc_user_password(user.kc_id, password_data.new_password)
+            except Exception as e:
+                logger.error(e)
+                # Rollback database changes if Keycloak update fails
+                await self.db.rollback()
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Error updating Keycloak user password: {str(e)}"
+                )
+
             return True
         
         # Handle generic exceptions, wrong ID provided error already handled in router

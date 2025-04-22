@@ -22,6 +22,11 @@ class UserUpdate(BaseModel):
 class UserCreate(UserBase):
     password: str
 
+class UserPasswordUpdate(BaseModel):
+    old_password: str
+    new_password: str
+    confirm_password: str
+
 class UserResponse(UserBase):
     user_id: int
     roles: Optional[list[str]] = []
