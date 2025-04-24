@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -196,18 +198,30 @@ class AppointmentOperations:
         limit: int,
         user_id: Optional[int] = None,
         barber_id: Optional[int] = None,
+        is_upcoming: Optional[bool] = None,
+        is_past: Optional[bool] = None,
     ) -> List[AppointmentResponse]:
         try:
             # Calculate offset for SQL query
             offset = (page - 1) * limit
 
-            result = await self.db.execute(
-                select(Appointment).limit(limit).offset(offset)
-            )
+            stmt = select(Appointment)
+            if user_id:
+                stmt = stmt.filter(Appointment.user_id == user_id)
+            if barber_id:
+                stmt = stmt.filter(Appointment.barber_id == barber_id)
+            if is_upcoming:
+                stmt = stmt.filter(Appointment.appointment_date >= datetime.now())
+            if is_past:
+                stmt = stmt.filter(Appointment.appointment_date < datetime.now())
+            stmt = stmt.offset(offset).limit(limit)
+
+
+            result = await self.db.execute(stmt)
             appointments = result.scalars().all()
 
             if not appointments:
-                return None
+                return []
             return [app.to_response_schema() for app in appointments]
 
         except SQLAlchemyError as e:

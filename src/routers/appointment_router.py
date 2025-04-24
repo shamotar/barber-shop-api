@@ -51,11 +51,47 @@ async def get_appointments(
     limit: int,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     user_id: int = None,
+    barber_id: int = None,
 ):
     AuthController.protected_endpoint(credentials)
     appointment_ops = AppointmentOperations(db_session)
-    return await appointment_ops.get_all_appointments(page, limit, user_id)
+    return await appointment_ops.get_all_appointments(page, limit, user_id, barber_id)
 
+@appointment_router.get(
+    "/upcoming",
+    response_model=List[AppointmentResponse],
+    responses={500: {"model": ErrorResponse}},
+    operation_id="getUpcomingAppointments",
+)
+async def get_appointments_upcoming(
+    db_session: DBSessionDep,
+    page: int,
+    limit: int,
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    user_id: int = None,
+    barber_id: int = None,
+):
+    AuthController.protected_endpoint(credentials)
+    appointment_ops = AppointmentOperations(db_session)
+    return await appointment_ops.get_all_appointments(page, limit, user_id, barber_id, is_upcoming=True)
+
+@appointment_router.get(
+    "/past",
+    response_model=List[AppointmentResponse],
+    responses={500: {"model": ErrorResponse}},
+    operation_id="getPastAppointments",
+)
+async def get_appointments_past(
+    db_session: DBSessionDep,
+    page: int,
+    limit: int,
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    user_id: int = None,
+    barber_id: int = None,
+):
+    AuthController.protected_endpoint(credentials)
+    appointment_ops = AppointmentOperations(db_session)
+    return await appointment_ops.get_all_appointments(page, limit, user_id, barber_id, is_past=True)
 
 # GET endpoint to retrieve a specific appointment from the database by the appointment_id
 @appointment_router.get(
