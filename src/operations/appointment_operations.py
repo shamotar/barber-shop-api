@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import delete
+from sqlalchemy import delete, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -14,6 +14,7 @@ from modules.user.models import (
     AppointmentService,
     Service,
 )
+from operations.barber_operations import BarberOperations
 from typing import List, Optional
 from fastapi import HTTPException
 from modules.appointment_schema import AppointmentCreate, AppointmentResponse
@@ -197,8 +198,8 @@ class AppointmentOperations:
         self,
         page: int,
         limit: int,
+        is_barber: bool,
         user_id: Optional[int] = None,
-        barber_id: Optional[int] = None,
         is_upcoming: Optional[bool] = None,
         is_past: Optional[bool] = None,
     ) -> List[AppointmentResponse]:
@@ -207,15 +208,21 @@ class AppointmentOperations:
             offset = (page - 1) * limit
 
             stmt = select(Appointment)
-            if user_id:
-                stmt = stmt.filter(Appointment.user_id == user_id)
-            if barber_id:
-                stmt = stmt.filter(Appointment.barber_id == barber_id)
+            if is_barber:
+                barber_ops = BarberOperations(self.db)
+                barber = await barber_ops.get_barber_by_user_id(user_id)
+                stmt = stmt.filter(or_(Appointment.barber_id == barber.barber_id, Appointment.user_id == user_id))
+            else:
+                stmt = stmt.filter((Appointment.user_id == user_id))
             if is_upcoming:
                 stmt = stmt.filter(Appointment.appointment_date >= datetime.now())
             if is_past:
                 stmt = stmt.filter(Appointment.appointment_date < datetime.now())
             stmt = stmt.offset(offset).limit(limit)
+
+            # Sort by appointment date
+            stmt = stmt.order_by(Appointment.appointment_date.asc())
+
 
 
             result = await self.db.execute(stmt)

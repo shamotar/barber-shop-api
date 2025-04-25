@@ -275,6 +275,9 @@ class Appointment_TimeSlot(Base):
     # Each Appointment_TimeSlot is linked to one TimeSlot
     appointment: Mapped["Appointment"] = relationship(back_populates="appointment_time_slots")
 
+    
+
+
 class Thread(Base):
     __tablename__ = "thread"
     

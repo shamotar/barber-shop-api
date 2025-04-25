@@ -69,11 +69,11 @@ async def get_appointments_upcoming(
     limit: int,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     user_id: int = None,
-    barber_id: int = None,
+    is_barber: bool = False,
 ):
     AuthController.protected_endpoint(credentials)
     appointment_ops = AppointmentOperations(db_session)
-    return await appointment_ops.get_all_appointments(page, limit, user_id, barber_id, is_upcoming=True)
+    return await appointment_ops.get_all_appointments(page, limit, is_barber, user_id, is_upcoming=True)
 
 @appointment_router.get(
     "/past",
@@ -87,11 +87,11 @@ async def get_appointments_past(
     limit: int,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     user_id: int = None,
-    barber_id: int = None,
+    is_barber: bool = False,
 ):
     AuthController.protected_endpoint(credentials)
     appointment_ops = AppointmentOperations(db_session)
-    return await appointment_ops.get_all_appointments(page, limit, user_id, barber_id, is_past=True)
+    return await appointment_ops.get_all_appointments(page, limit, is_barber, user_id, is_past=True)
 
 # GET endpoint to retrieve a specific appointment from the database by the appointment_id
 @appointment_router.get(
