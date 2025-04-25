@@ -60,8 +60,8 @@ async def get_current_user(db_session: DBSessionDep, credentials: HTTPAuthorizat
     
     user_ops = UserOperations(db_session)
     user = await user_ops.get_user_by_kc_id(user_info.id)
-    
-    return user.to_response_schema()
+
+    return {**user.to_response_schema().model_dump(), "roles": user_info.roles}
 
 # GET endpoint to retrieve a specific user in the database by their ID
 @user_router.get("/{user_id}", response_model=UserResponse, responses= {

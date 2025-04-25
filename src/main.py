@@ -13,7 +13,6 @@ from routers.service_router import service_router
 from routers.schedule_router import schedule_router
 from routers.auth_router import auth_router
 from routers.appointment_router import appointment_router
-from routers.email_router import email_router
 from routers.thread_router import thread_router
 from routers.message_router import message_router
 
@@ -45,7 +44,6 @@ app.add_middleware(
 
 # Connect routers
 app.include_router(auth_router)
-app.include_router(email_router)
 app.include_router(user_router)
 app.include_router(barber_router)
 app.include_router(service_router)

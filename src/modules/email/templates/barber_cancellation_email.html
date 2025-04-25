@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointment Cancellation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            color: #d32f2f;
+        }
+        .content {
+            margin-bottom: 20px;
+        }
+        .button-container {
+            text-align: center;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #1976d2;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .button:hover {
+            background-color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Appointment Cancelled</h1>
+        </div>
+        <div class="content">
+            <p>{{ barber_name }},</p>
+            <p>An appointment scheduled with you has been cancelled.</p>
+            <p><strong>Details of the cancelled appointment:</strong></p>
+            <ul>
+                <li><strong>Client Name:</strong> {{ client_name }}</li>
+                <li><strong>Appointment Date:</strong> {{ appointment_date }}</li>
+                <li><strong>Time:</strong> {{ appointment_time }}</li>
+                <li><strong>Service:</strong> {{ service_name }}</li>
+            </ul>
+            <p>You can view your updated schedule below:</p>
+        </div>
+        <div class="button-container">
+            <a href="{{ appointments_url }}" class="button">View Appointments</a>
+        </div>
+    </div>
+</body>
+</html>

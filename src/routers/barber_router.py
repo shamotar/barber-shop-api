@@ -64,5 +64,14 @@ async def get_barber_by_id(barber_id: int, db_session: DBSessionDep):
 
     return response.to_response_schema()
 
+@barber_router.get("/user/{user_id}", response_model=BarberResponse, responses = {
+    500: {"model": ErrorResponse}
+}, operation_id="getBarberByUserId")
+async def get_barber_by_user_id(user_id: int, db_session: DBSessionDep):
+    barber_ops = BarberOperations(db_session)
+    response = await barber_ops.get_barber_by_user_id(user_id)
+
+    return response.to_response_schema()
+
 
 

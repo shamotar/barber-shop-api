@@ -18,7 +18,8 @@ from typing import List, Optional
 from fastapi import HTTPException
 from modules.appointment_schema import AppointmentCreate, AppointmentResponse
 import logging
-from operations.email_operations import email_operations
+from modules.email.email_operations import email_operations
+from modules.email.email_service import EmailService
 
 logger = logging.getLogger("appointment_operations")
 logger.setLevel(logging.ERROR)
@@ -348,9 +349,51 @@ class AppointmentOperations:
 
             if not appointment:
                 return False
+            
+            # Load information about the appointment to be deleted
+            appointment_user = appointment.user
+            appointment_date = appointment.appointment_date
+            appointment_time_slot = appointment.appointment_time_slots[0].time_slot
+            appointment_service = appointment.appointment_services[0].service
+            barber_user = appointment.barber.user
+
+            email_service = EmailService(email_operations)
+
+            # Send out cancellation email to barber
+            try:
+                await email_service.send_barber_cancellation_email(
+                    barber=barber_user,
+                    client_name=appointment_user,
+                    service_name=appointment_service.name,
+                    appointment_date=appointment_date,
+                    appointment_time=appointment_time_slot.start_time
+                )
+            except Exception as e:
+                logger.error(f"An error occurred while sending cancellation email to barber: {e}")
+
+            # Send out cancellation email to client
+            try:
+                await email_service.send_client_cancellation_email(
+                    barber=barber_user,
+                    client=appointment_user,
+                    service_name=appointment_service.name,
+                    appointment_date=appointment_date,
+                    appointment_time=appointment_time_slot.start_time
+                )
+            except Exception as e:
+                logger.error(f"An error occurred while sending cancellation email to client: {e}")
+
+            # Set the is_booked field in TimeSlot table back to False for the selected slot_id(s)
+            for time_slot in appointment.appointment_time_slots:
+                await self.db.execute(
+                    TimeSlot.__table__.update()
+                    .where(TimeSlot.slot_id == time_slot.slot_id)
+                    .values(is_booked=False)
+                )
 
             await self.db.delete(appointment)
             await self.db.commit()
+
             return True
         except SQLAlchemyError as e:
             logger.error(e)
