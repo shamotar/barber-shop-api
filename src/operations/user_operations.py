@@ -2,9 +2,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import SQLAlchemyError
 from modules.user.models import User
-from modules.user.user_schema import UserCreate, UserUpdate, UserPasswordUpdate
+from modules.user.user_schema import UserCreate, UserUpdate, UserPasswordUpdate, UserResponse
 from typing import List, Optional
 from fastapi import HTTPException
+from sqlalchemy import or_
 
 from auth.service import AuthService
 import logging
@@ -120,6 +121,33 @@ class UserOperations:
             raise HTTPException(
                 status_code=500,
                 detail="An unexpected error occured"
+            )
+
+    # Get users matching search criteria
+    async def search_users_by_username(self, term: str, page: int, limit: int) -> List[UserResponse]:
+        offset = (page - 1) * limit
+        try:
+            stmt = (
+                select(User)
+                .filter(
+                    or_(
+                        User.firstName.ilike(f"%{term}%"),
+                        User.lastName.ilike(f"%{term}%")
+                    )
+                )
+                .limit(limit)
+                .offset(offset)
+            )
+            result = await self.db.execute(stmt)
+            users = result.scalars().all()
+
+            # Convert ORM models to Pydantic schemas
+            return [UserResponse.from_orm(u) for u in users]
+        except SQLAlchemyError as e:
+            # Optional: log error e
+            raise HTTPException(
+                status_code=500,
+                detail="An error occurred searching for users"
             )
 
     # Update user by their ID

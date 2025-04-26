@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import HTTPException
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from modules.thread_schema import ThreadCreate, ThreadResponse
 from sqlalchemy.exc import SQLAlchemyError
@@ -109,22 +109,20 @@ class ThreadOperations:
 
             thread_responses = []
             
-            # Retrieve all messages from each threads
-
+            # Retrieve all messages from each thread, newest first
             for thread in threads_results:
-           
                 messages = await self.db.execute(
-                    select(Message).filter(Message.thread_id == thread.thread_id)
+                    select(Message)
+                    .filter(Message.thread_id == thread.thread_id)
+                    .order_by(desc(Message.timeStamp))
                 )
                 messages_results = messages.scalars().all()
-
-
-                 # Craft response, including thread details and all messages for each associated thread
 
                 thread_response = ThreadResponse(
                     thread_id=thread.thread_id,
                     receivingUser=thread.receivingUser,
                     sendingUser=thread.sendingUser,
+                    # messages come back newest→oldest, your front end then sorts oldest→newest
                     messages=[MessageResponse.model_validate(message) for message in messages_results]
                 )
                 thread_responses.append(thread_response)
@@ -164,9 +162,12 @@ class ThreadOperations:
             offset = (page - 1) * limit
 
             for thread in thread_results:
-           
                 messages = await self.db.execute(
-                    select(Message).filter(Message.thread_id == thread.thread_id).limit(limit).offset(offset)
+                    select(Message)
+                    .filter(Message.thread_id == thread.thread_id)
+                    .order_by(desc(Message.timeStamp))
+                    .limit(limit)
+                    .offset(offset)
                 )
                 messages_results = messages.scalars().all()
 

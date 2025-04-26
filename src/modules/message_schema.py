@@ -9,6 +9,7 @@ class MessageBase(BaseModel):
     thread_id: int
     hasActiveMessage: bool
     text: str
+    sender_id: int
 
 # No additional fields needed to create message
 class MessageCreate(MessageBase):
@@ -21,6 +22,7 @@ class MessageActiveUpdate(BaseModel):
 class MessageResponse(MessageBase):
     message_id: int
     timeStamp: datetime
+    
 
     class Config:
         from_attributes = True

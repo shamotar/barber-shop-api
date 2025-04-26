@@ -63,6 +63,35 @@ async def get_current_user(db_session: DBSessionDep, credentials: HTTPAuthorizat
 
     return {**user.to_response_schema().model_dump(), "roles": user_info.roles}
 
+# Get endpoint to search for users
+bearer = HTTPBearer()
+
+@user_router.get(
+    "/search",
+    response_model=List[UserResponse],
+    responses={400: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+    summary="Search users by username (auth required)"
+)
+async def search_users(
+    db_session: DBSessionDep,
+    q: str = Query(..., min_length=2, description="Search term for username"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, le=100),
+    credentials: HTTPAuthorizationCredentials = Depends(bearer),
+):
+    # Only require a valid token (no special role):
+    AuthController.protected_endpoint(credentials)
+
+    user_ops = UserOperations(db_session)
+    try:
+        return await user_ops.search_users_by_username(q, page, limit)
+    except HTTPException:
+        # Let UserOperations raise 400/500 as appropriate
+        raise
+    except Exception as e:
+        # Fallback unexpected errors
+        raise HTTPException(status_code=500, detail=str(e))
+
 # GET endpoint to retrieve a specific user in the database by their ID
 @user_router.get("/{user_id}", response_model=UserResponse, responses= {
      400: {"model": ErrorResponse},

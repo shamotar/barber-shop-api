@@ -32,7 +32,8 @@ class MessageOperations:
             new_message = Message(
                 thread_id = message.thread_id,
                 hasActiveMessage = message.hasActiveMessage,
-                text = message.text
+                text = message.text,
+                sender_id = message.sender_id
             )
 
             self.db.add(new_message)

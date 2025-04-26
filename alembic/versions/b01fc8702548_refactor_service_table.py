@@ -311,40 +311,6 @@ def upgrade() -> None:
             }
         ]
     )
-
-    op.bulk_insert(
-        messages_table,
-        [
-            {
-                "message_id": 1,
-                "thread_id": 1,
-                "hasActiveMessage": False,
-                "text": "Hi John, I have a question about my upcoming appointment.",
-                "timeStamp": "2025-02-16T10:00:00"
-            },
-            {
-                "message_id": 2,
-                "thread_id": 1,
-                "hasActiveMessage": True,
-                "text": "Hi Jane, sure. What can I help you with?",
-                "timeStamp": "2025-02-16T10:05:00"
-            },
-            {
-                "message_id": 3,
-                "thread_id": 2,
-                "hasActiveMessage": False,
-                "text": "Hello Mike, I need to reschedule my appointment.",
-                "timeStamp": "2025-02-16T11:00:00"
-            },
-            {
-                "message_id": 4,
-                "thread_id": 2,
-                "hasActiveMessage": True,
-                "text": "Hi Sarah, that's fine. Let me know your preferred time.",
-                "timeStamp": "2025-02-16T11:10:00"
-            }
-        ]
-    )
     # ### end Alembic commands ###
 
 

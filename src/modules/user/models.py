@@ -306,9 +306,13 @@ class Message(Base):
 
     message_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     thread_id: Mapped[int] = mapped_column(ForeignKey("thread.thread_id", ondelete="CASCADE"), nullable=False)
+    sender_id: Mapped[int] = mapped_column(ForeignKey("user.user_id", ondelete="CASCADE"), nullable=False)
     hasActiveMessage: Mapped[bool] = mapped_column(Boolean, default=True)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     timeStamp: Mapped[DateTime] = mapped_column(DateTime, default=func.current_timestamp())
     
     # Each message belongs to one thread (Many-To-One)
     thread: Mapped["Thread"] = relationship(back_populates="messages")
+
+    # Each message belongs to one user
+    sender: Mapped["User"] = relationship(foreign_keys=[sender_id])
