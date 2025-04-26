@@ -19,12 +19,12 @@ class EmailOperations:
                 detail="Failed to initialize email configuration"
             ) 
 
-    async def send_email(self, email: str, subject: str, body: str):
+    async def send_email(self, email: str | list, subject: str, body: str):
         try:
             # Create the email message schema
             message = MessageSchema(
                 subject=subject,
-                recipients=[email],  # List of recipients
+                recipients=[email] if type(email) == str else email,  # List of recipients
                 body=body,
                 subtype="html"
             )

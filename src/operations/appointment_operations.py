@@ -1,4 +1,6 @@
-from sqlalchemy import delete
+from datetime import datetime
+
+from sqlalchemy import delete, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -12,11 +14,13 @@ from modules.user.models import (
     AppointmentService,
     Service,
 )
+from operations.barber_operations import BarberOperations
 from typing import List, Optional
 from fastapi import HTTPException
 from modules.appointment_schema import AppointmentCreate, AppointmentResponse
 import logging
-from operations.email_operations import email_operations
+from modules.email.email_operations import email_operations
+from modules.email.email_service import EmailService
 
 logger = logging.getLogger("appointment_operations")
 logger.setLevel(logging.ERROR)
@@ -194,20 +198,38 @@ class AppointmentOperations:
         self,
         page: int,
         limit: int,
+        is_barber: bool,
         user_id: Optional[int] = None,
-        barber_id: Optional[int] = None,
+        is_upcoming: Optional[bool] = None,
+        is_past: Optional[bool] = None,
     ) -> List[AppointmentResponse]:
         try:
             # Calculate offset for SQL query
             offset = (page - 1) * limit
 
-            result = await self.db.execute(
-                select(Appointment).limit(limit).offset(offset)
-            )
+            stmt = select(Appointment)
+            if is_barber:
+                barber_ops = BarberOperations(self.db)
+                barber = await barber_ops.get_barber_by_user_id(user_id)
+                stmt = stmt.filter(or_(Appointment.barber_id == barber.barber_id, Appointment.user_id == user_id))
+            else:
+                stmt = stmt.filter((Appointment.user_id == user_id))
+            if is_upcoming:
+                stmt = stmt.filter(Appointment.appointment_date >= datetime.now())
+            if is_past:
+                stmt = stmt.filter(Appointment.appointment_date < datetime.now())
+            stmt = stmt.offset(offset).limit(limit)
+
+            # Sort by appointment date
+            stmt = stmt.order_by(Appointment.appointment_date.asc())
+
+
+
+            result = await self.db.execute(stmt)
             appointments = result.scalars().all()
 
             if not appointments:
-                return None
+                return []
             return [app.to_response_schema() for app in appointments]
 
         except SQLAlchemyError as e:
@@ -334,22 +356,51 @@ class AppointmentOperations:
 
             if not appointment:
                 return False
+            
+            # Load information about the appointment to be deleted
+            appointment_user = appointment.user
+            appointment_date = appointment.appointment_date
+            appointment_time_slot = appointment.appointment_time_slots[0].time_slot
+            appointment_service = appointment.appointment_services[0].service
+            barber_user = appointment.barber.user
 
-            # Delete associated appointment_time_slot records
-            await self.db.execute(
-                delete(Appointment_TimeSlot).where(
-                    Appointment_TimeSlot.appointment_id == appointment_id
+            email_service = EmailService(email_operations)
+
+            # Send out cancellation email to barber
+            try:
+                await email_service.send_barber_cancellation_email(
+                    barber=barber_user,
+                    client_name=appointment_user,
+                    service_name=appointment_service.name,
+                    appointment_date=appointment_date,
+                    appointment_time=appointment_time_slot.start_time
                 )
-            )
-            # Delete associated appointment_service records
-            await self.db.execute(
-                delete(AppointmentService).where(
-                    AppointmentService.appointment_id == appointment_id
+            except Exception as e:
+                logger.error(f"An error occurred while sending cancellation email to barber: {e}")
+
+            # Send out cancellation email to client
+            try:
+                await email_service.send_client_cancellation_email(
+                    barber=barber_user,
+                    client=appointment_user,
+                    service_name=appointment_service.name,
+                    appointment_date=appointment_date,
+                    appointment_time=appointment_time_slot.start_time
                 )
-            )
+            except Exception as e:
+                logger.error(f"An error occurred while sending cancellation email to client: {e}")
+
+            # Set the is_booked field in TimeSlot table back to False for the selected slot_id(s)
+            for time_slot in appointment.appointment_time_slots:
+                await self.db.execute(
+                    TimeSlot.__table__.update()
+                    .where(TimeSlot.slot_id == time_slot.slot_id)
+                    .values(is_booked=False)
+                )
 
             await self.db.delete(appointment)
             await self.db.commit()
+
             return True
         except SQLAlchemyError as e:
             logger.error(e)

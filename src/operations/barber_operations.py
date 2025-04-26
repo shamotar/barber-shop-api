@@ -103,6 +103,22 @@ class BarberOperations:
                 detail="An unexpected error occurred"
             )
         
+    # Retrieve a specific barber by their User ID
+    async def get_barber_by_user_id(self, user_id: int):
+        try:
+            result = await self.db.execute(select(Barber).filter(Barber.user_id == user_id))
+            first_result = result.scalars().first()
+            if not first_result:
+                raise HTTPException(status_code = 400, detail="No barber found with provided User ID")
+            else:
+                return first_result
+        except SQLAlchemyError as e:
+            logger.error(e)
+            raise HTTPException(
+                status_code=500,
+                detail="An unexpected error occurred"
+            )
+        
     async def list_barbers_by_schedule_date(self, schedule_date: str, page: int = None, limit: int = None) -> List[Barber]:
         # Get a Schedule object by date
         schedules = await self.db.execute(select(Schedule).filter(Schedule.date == schedule_date))
