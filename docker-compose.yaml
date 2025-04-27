@@ -1,79 +1,80 @@
+version: "3.9"
+
 services:
-    keycloak:
-        image: quay.io/keycloak/keycloak:latest
-        container_name: keycloak
-        ports:
-            - "8080:8080"
-        env_file:
-            - .env
-        environment:
-            - KC_BOOTSTRAP_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME}
-            - KC_BOOTSTRAP_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
-            - KEYCLOAK_API_SECRET=${KEYCLOAK_API_SECRET}
-            - KEYCLOAK_FRONT_END_SECRET=${KEYCLOAK_FRONT_END_SECRET}
-        volumes:
-            - ./keycloak/realm-config.json:/opt/keycloak/data/import/realm-config.json
-            - ./keycloak/themes:/opt/keycloak/providers/
-        command: ["start-dev", "--import-realm", "--spi-theme-static-max-age=-1", "--spi-theme-cache-themes=false", "--spi-theme-cache-templates=false"]
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2.1
+    container_name: keycloak
+    command:
+      - start-dev
+      - --import-realm
+    env_file: .env
+    environment:
+      - KC_HOSTNAME=${KC_HOSTNAME}
+      - KC_PROXY=${KC_PROXY}
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN_USERNAME}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+    ports:
+      - "8080:8080"
+    volumes:
+      - kc-data:/opt/keycloak/data
+      - ./keycloak/realm-config.json:/opt/keycloak/data/import/realm-config.json
+      - ./keycloak/themes:/opt/keycloak/themes
+    networks: [barber-shop-network]
 
-    db:
-        image: mysql:latest
-        hostname: barbershop
-        restart: always
-        environment:
-            MYSQL_ROOT_PASSWORD: password
-            MYSQL_DATABASE: barbershop
-        ports:
-            - "3306:3306"
-        healthcheck:
-            test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
-            interval: 10s
-            timeout: 10s
-            retries: 5
-        env_file:
-            - .env
-        # volumes:
-        #     - ./db-dump:/docker-entrypoint-initdb.d
-    
-    phpmyadmin:
-        image: phpmyadmin:latest
-        depends_on:
-            - db
-        ports:
-            - 8082:80
-        environment:
-            - PMA_HOST=${MYSQL_HOST}
-            - MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD}
-        
-    api:
-        image: python:3.12
-        hostname: barber-shop-api
-        restart: always
-        depends_on:
-            db:
-                condition: service_healthy
-                restart: true
-        ports:
-            - 8000:8000
-        expose:
-            - 8000:8000
-        working_dir:
-            /app
-        volumes:
-            - ./:/app
-        env_file:
-            - .env
-        command: sh scripts/start.sh
+  db:
+    image: mysql:8.3
+    container_name: mysql
+    env_file: .env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DB}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    ports: ["3306:3306"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks: [barber-shop-network]
 
-    smtp:
-        image: gessnerfl/fake-smtp-server:latest
-        container_name: fake-smtp
-        env_file:
-            - .env
-        ports:
-        - "8125:8025" #expose smtp port
-        - "8180:8080" #expose web ui
-        - "8181:8081" #expose management api
+  phpmyadmin:
+    image: phpmyadmin:latest
+    depends_on: [db]
+    environment:
+      - PMA_HOST=db
+      - MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD}
+    ports: ["8082:80"]
+    networks: [barber-shop-network]
+
+  api:
+    build: .
+    container_name: barber-shop-api
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    ports: ["8000:8000"]
+    volumes:
+      - ./:/app        
+    networks: [barber-shop-network]
+
+  smtp:
+    image: gessnerfl/fake-smtp-server:latest
+    container_name: fake-smtp
+    env_file: .env
+    ports:
+      - "8125:8025"
+      - "8180:8080"
+      - "8181:8081"
+    networks: [barber-shop-network]
+
 networks:
-    barber-shop-network:
-        external: true
+  barber-shop-network:
+    external: true
+
+volumes:
+  mysql-data:
+  kc-data:
