@@ -1940,7 +1940,6 @@
       "addReadTokenRoleOnCreate": false,
       "authenticateByDefault": false,
       "linkOnly": false,
-      "hideOnLogin": false,
       "config": {
         "syncMode": "LEGACY",
         "clientSecret": "${GOOGLE_CLIENT_SECRET}",
